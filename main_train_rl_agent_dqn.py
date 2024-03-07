@@ -154,6 +154,7 @@ boltzmann_fn = tf.keras.optimizers.schedules.PolynomialDecay(initial_learning_ra
 agent = dqn_agent.DqnAgent(time_step_spec=train_tf_env.time_step_spec(),
                            action_spec=train_tf_env.action_spec(),
                            q_network=q_net,
+                           target_q_network=None,
                            optimizer=optimizer,
                            n_step_update=n_step_update,
                            target_update_period=target_update_period,
@@ -284,45 +285,104 @@ for _ in range(num_iterations):
         print('INFO: Training progress: %.0f%%...' % (step / num_iterations * 100.0))
 
 
+# # ----------------------------------------------------------------------------------------------------------------------
+# # SAVE Q-NETWORK AS TF-LITE --------------------------------------------------------------------------------------------
+# # ----------------------------------------------------------------------------------------------------------------------
+
+# # set paths
+# repo_path_ = os.path.dirname(os.path.abspath(__file__))
+# output_path_ = os.path.join(repo_path_, 'machine_learning_rl_training', 'output')
+# tmp_path_ = os.path.join(output_path_, 'tmp')
+
+# # create folders if not existing
+# os.makedirs(output_path_, exist_ok=True)
+# os.makedirs(tmp_path_, exist_ok=True)
+
+# # set file paths
+# tmp_file_path_ = os.path.join(tmp_path_, 'q_network_tmp')
+# preprocessor_file_path_ = os.path.join(output_path_, "preprocessor_reinforcement_%s.pkl" % race)
+# qnet_file_path_ = os.path.join(output_path_, "nn_reinforcement_%s.tflite" % race)
+
+# # save preprocessor
+# with open(preprocessor_file_path_, "wb") as fh:
+#     pickle.dump(train_py_env.cat_preprocessor, fh)
+
+# # DQN must be save and loaded once such that the conversion to TF lite works
+# agent._target_q_network.save_weights(tmp_file_path_)
+# q_net = q_network.QNetwork(input_tensor_spec=train_tf_env.observation_spec(),
+#                            action_spec=train_tf_env.action_spec(),
+#                            fc_layer_params=fc_layer_params)
+# q_net.load_weights(tmp_file_path_)
+# #q_net_model = q_net  # No need to call .q_network here since q_net is already the QNetwork object
+# #q_net_model.load_weights(tmp_file_path_)  # Load the weights
+
+# time_step = eval_tf_env.reset()
+# q_net(time_step.observation)
+# shutil.rmtree(tmp_path_)  # delete tmp_path_ again
+
+# # convert to TF lite model
+# converter = tf.lite.TFLiteConverter.from_keras_model(q_net)
+# tflite_q_net = converter.convert()
+
+# # save TF lite model
+# with open(qnet_file_path_, 'wb') as fh:
+#     fh.write(tflite_q_net)
+
+# print('RESULT: TF-lite q-network and preprocessor were saved in the machine_learning_rl_training/output folder!')
+
+# # ----------------------------------------------------------------------------------------------------------------------
+# # CALCULATE AVERAGE RETURNS --------------------------------------------------------------------------------------------
+# # ----------------------------------------------------------------------------------------------------------------------
+
+# if calculate_final_positions:
+#     py_env = machine_learning_rl_training.src.rl_environment_single_agent.RaceSimulation(race_pars_file=race_pars_file,
+#                                                                                          mcs_pars_file=mcs_pars_file,
+#                                                                                          vse_type=vse_others,
+#                                                                                          use_prob_infl=True,
+#                                                                                          create_rand_events=True)
+
+#     machine_learning_rl_training.src.rl_evaluate_policy.print_returns_positions(py_env=py_env,
+#                                                                                 num_races=num_races_postproc,
+#                                                                                 tf_lite_path=qnet_file_path_,
+#                                                                                 vse_others=vse_others_postproc)
+
 # ----------------------------------------------------------------------------------------------------------------------
 # SAVE Q-NETWORK AS TF-LITE --------------------------------------------------------------------------------------------
 # ----------------------------------------------------------------------------------------------------------------------
 
-# set paths
-repo_path_ = os.path.dirname(os.path.abspath(__file__))
-output_path_ = os.path.join(repo_path_, 'machine_learning_rl_training', 'output')
-tmp_path_ = os.path.join(output_path_, 'tmp')
+import tensorflow as tf
 
-# create folders if not existing
-os.makedirs(output_path_, exist_ok=True)
-os.makedirs(tmp_path_, exist_ok=True)
+# Set paths
+repo_path = os.path.dirname(os.path.abspath(__file__))
+output_path = os.path.join(repo_path, 'machine_learning_rl_training', 'output')
 
-# set file paths
-tmp_file_path_ = os.path.join(tmp_path_, 'q_network_tmp')
-preprocessor_file_path_ = os.path.join(output_path_, "preprocessor_reinforcement_%s.pkl" % race)
-qnet_file_path_ = os.path.join(output_path_, "nn_reinforcement_%s.tflite" % race)
+# Ensure the output directory exists
+os.makedirs(output_path, exist_ok=True)
 
-# save preprocessor
-with open(preprocessor_file_path_, "wb") as fh:
-    pickle.dump(train_py_env.cat_preprocessor, fh)
+# Define file paths
+preprocessor_file_path = os.path.join(output_path, f"preprocessor_reinforcement_{race}.pkl")
+qnet_file_path = os.path.join(output_path, f"nn_reinforcement_{race}.tflite")
 
-# DQN must be save and loaded once such that the conversion to TF lite works
-agent._target_q_network.save_weights(tmp_file_path_)
-q_net = q_network.QNetwork(input_tensor_spec=train_tf_env.observation_spec(),
-                           action_spec=train_tf_env.action_spec(),
-                           fc_layer_params=fc_layer_params)
-q_net.load_weights(tmp_file_path_)
-time_step = eval_tf_env.reset()
-q_net(time_step.observation)
-shutil.rmtree(tmp_path_)  # delete tmp_path_ again
+# Save the preprocessor
+with open(preprocessor_file_path, "wb") as file_handle:
+    pickle.dump(train_py_env.cat_preprocessor, file_handle)
 
-# convert to TF lite model
-converter = tf.lite.TFLiteConverter.from_keras_model(q_net)
-tflite_q_net = converter.convert()
+# Prepare the QNetwork for conversion
+# Create a tf.function through wrapping the call method. Use input_signature to ensure the function is concrete.
+@tf.function(input_signature=[tf.TensorSpec(shape=[None] + list(train_tf_env.observation_spec().shape), dtype=tf.float32)])
+def q_net_signature(observation):
+    return agent._q_network(observation)
 
-# save TF lite model
-with open(qnet_file_path_, 'wb') as fh:
-    fh.write(tflite_q_net)
+# Convert the tf.function to a concrete function
+concrete_function = q_net_signature.get_concrete_function()
+
+# Convert the concrete function to TensorFlow Lite
+converter = tf.lite.TFLiteConverter.from_concrete_functions([concrete_function])
+tflite_model = converter.convert()
+
+# Save the TensorFlow Lite model
+with open(qnet_file_path, 'wb') as f:
+    f.write(tflite_model)
 
 print('RESULT: TF-lite q-network and preprocessor were saved in the machine_learning_rl_training/output folder!')
 
@@ -331,13 +391,15 @@ print('RESULT: TF-lite q-network and preprocessor were saved in the machine_lear
 # ----------------------------------------------------------------------------------------------------------------------
 
 if calculate_final_positions:
-    py_env = machine_learning_rl_training.src.rl_environment_single_agent.RaceSimulation(race_pars_file=race_pars_file,
-                                                                                         mcs_pars_file=mcs_pars_file,
-                                                                                         vse_type=vse_others,
-                                                                                         use_prob_infl=True,
-                                                                                         create_rand_events=True)
+    py_env = machine_learning_rl_training.src.rl_environment_single_agent.RaceSimulation(
+        race_pars_file=race_pars_file,
+        mcs_pars_file=mcs_pars_file,
+        vse_type=vse_others,
+        use_prob_infl=True,
+        create_rand_events=True)
 
-    machine_learning_rl_training.src.rl_evaluate_policy.print_returns_positions(py_env=py_env,
-                                                                                num_races=num_races_postproc,
-                                                                                tf_lite_path=qnet_file_path_,
-                                                                                vse_others=vse_others_postproc)
+    machine_learning_rl_training.src.rl_evaluate_policy.print_returns_positions(
+        py_env=py_env,
+        num_races=num_races_postproc,
+        tf_lite_path=qnet_file_path,
+        vse_others=vse_others_postproc)

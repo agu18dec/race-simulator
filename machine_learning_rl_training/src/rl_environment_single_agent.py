@@ -135,11 +135,9 @@ class RaceSimulation(tf_agents.environments.py_environment.PyEnvironment):
         # get all drivers participating in the race for feature driver and sort initials
         self.all_driver_initials = [self.race.drivers_list[idx].initials for idx in range(self.race.no_drivers)]
         self.all_driver_initials.sort()
-
         # get index of driver who is controlled by the agent in this race
         self.idx_driver = next((idx for idx, driver in enumerate(self.race.drivers_list)
                                 if driver.initials == self.driver_initials), None)
-
         # calculate the lowest possible average lap times for each driver
         self.average_laptimes_presim = self.race.execute_presim_average_laptimes()
 
@@ -536,7 +534,7 @@ class RaceSimulation(tf_agents.environments.py_environment.PyEnvironment):
 
         return reward
 
-    def __calculate_reward_position(self, delta_position: np.int32) -> np.float:
+    def __calculate_reward_position(self, delta_position: np.int32) -> float:
         """
         This method returns an reward of +5.0/-5.0 for each position the driver won/lost until the next pit stop
         decision.

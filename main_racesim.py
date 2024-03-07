@@ -7,6 +7,7 @@ import time
 import os
 import pkg_resources
 import pickle
+import tensorflow as tf
 
 """
 author:
@@ -73,6 +74,7 @@ def main(sim_opts: dict, race_pars_file: str, mcs_pars_file: str) -> list:
                                                              race_pars_file=race_pars_file,
                                                              mcs_pars_file=mcs_pars_file)
 
+    print(f"VSE Paths {vse_paths}")
     # check parameters
     racesim.src.check_pars.check_pars(sim_opts=sim_opts, pars_in=pars_in)
 
@@ -258,7 +260,7 @@ if __name__ == '__main__':
     # ------------------------------------------------------------------------------------------------------------------
 
     # set race parameter file names
-    race_pars_file_ = 'pars_Spielberg_2019.ini'
+    race_pars_file_ = 'pars_Shanghai_2019.ini'
     mcs_pars_file_ = 'pars_mcs.ini'
 
     # set simulation options
@@ -277,12 +279,12 @@ if __name__ == '__main__':
     # use_plot:             set if plotting should be used or not
     sim_opts_ = {"use_prob_infl": False,
                  "create_rand_events": False,
-                 "use_vse": False,
+                 "use_vse": True,
                  "no_sim_runs": 1,
                  "no_workers": 1,
                  "use_print": True,
                  "use_print_result": True,
-                 "use_plot": False}
+                 "use_plot": True}
 
     # ------------------------------------------------------------------------------------------------------------------
     # SIMULATION CALL --------------------------------------------------------------------------------------------------

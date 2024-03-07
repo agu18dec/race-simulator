@@ -285,7 +285,7 @@ if __name__ == '__main__':
     # set race parameter file name and if the parameter file is given in the simple format (i.e. specifically for the
     # basic race simulation) or not (i.e. it is a parameter file intended for the use with the normal race simulation)
     # -> in the latter case, the parameters will be converted automatically for the given driver initials
-    race_pars_file_ = "pars_YasMarina_2017.ini"
+    race_pars_file_ = "pars_Shanghai_2019.ini"
     simple_format_ = True
     driver_initials_ = ""  # only relevant if simple_format_ is False
 
