@@ -45,7 +45,7 @@ vse_others = "supervised"
 mcs_pars_file = "pars_mcs.ini"  # parameter file for Monte Carlo parameters
 
 # hyperparameters
-num_iterations = 250_000
+num_iterations = 20#250_000
 replay_buffer_max_length = 200_000
 initial_collect_steps = 200
 collect_steps_per_iteration = 1
@@ -154,14 +154,14 @@ boltzmann_fn = tf.keras.optimizers.schedules.PolynomialDecay(initial_learning_ra
 agent = dqn_agent.DqnAgent(time_step_spec=train_tf_env.time_step_spec(),
                            action_spec=train_tf_env.action_spec(),
                            q_network=q_net,
-                           target_q_network=None,
+                           #target_q_network=None, 
                            optimizer=optimizer,
                            n_step_update=n_step_update,
                            target_update_period=target_update_period,
                            td_errors_loss_fn=common.element_wise_squared_loss,
                            gamma=gamma,
                            train_step_counter=train_step_counter,
-                           epsilon_greedy=None,
+                           epsilon_greedy=0.1, #change for next training
                            boltzmann_temperature=lambda: boltzmann_fn(train_step_counter))
 agent.initialize()
 
