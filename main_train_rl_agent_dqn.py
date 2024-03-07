@@ -161,7 +161,7 @@ agent = dqn_agent.DqnAgent(time_step_spec=train_tf_env.time_step_spec(),
                            td_errors_loss_fn=common.element_wise_squared_loss,
                            gamma=gamma,
                            train_step_counter=train_step_counter,
-                           epsilon_greedy=0.1, #change for next training
+                           epsilon_greedy=None, #its either this or temperature
                            boltzmann_temperature=lambda: boltzmann_fn(train_step_counter))
 agent.initialize()
 
