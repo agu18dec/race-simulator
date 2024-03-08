@@ -31,17 +31,17 @@ from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 import racesim
-
+import matplotlib.pyplot as plt
 
 # ----------------------------------------------------------------------------------------------------------------------
 # USER INPUT -----------------------------------------------------------------------------------------------------------
 # ----------------------------------------------------------------------------------------------------------------------
 
 # environment parameters
-race = "YasMarina_2017"  # set race (see racesim/input/parameters for possible races)
+race = "YasMarina_2019"  # set race (see racesim/input/parameters for possible races)
 # VSE type for other drivers: 'basestrategy', 'realstrategy', 'supervised', 'reinforcement' (if already available),
 # 'multi_agent' (if VSE should learn for all drivers at once)
-vse_others = "supervised"
+vse_others = "realstrategy"
 mcs_pars_file = "pars_mcs.ini"  # parameter file for Monte Carlo parameters
 
 # hyperparameters
@@ -60,7 +60,7 @@ dueling_q_net = False
 
 # training options
 log_interval = 100_000
-eval_interval = 50_000
+eval_interval = 10_000
 num_eval_episodes = 100
 
 # postprocessing (currently not implemented for multi-agent environment)
@@ -262,6 +262,9 @@ agent.train_step_counter.assign(0)
 avg_return = compute_average_return(env=eval_tf_env, policy=eval_policy, num_episodes=num_eval_episodes)
 print("INFO: Evaluated the agent's policy once before the training, average return: %.3f" % avg_return)
 
+# list for logging average returns and steps
+avg_returns_log = []
+
 for _ in range(num_iterations):
     # collect a few steps using collect_policy and save them to the replay buffer
     for _ in range(collect_steps_per_iteration):
@@ -279,6 +282,7 @@ for _ in range(num_iterations):
     if step % eval_interval == 0:
         avg_return = compute_average_return(env=eval_tf_env, policy=eval_policy, num_episodes=num_eval_episodes)
         print('INFO: Step %i, average return %.3f' % (step, avg_return))
+        avg_returns_log.append((step, avg_return))
 
     if (10 * step) % num_iterations == 0:
         # print every 10%
@@ -403,3 +407,18 @@ if calculate_final_positions:
         num_races=num_races_postproc,
         tf_lite_path=qnet_file_path,
         vse_others=vse_others_postproc)
+
+iterations, avg_returns = zip(*avg_returns_log)
+
+# Create the plot
+plt.figure(figsize=(10, 6))
+plt.plot(iterations, avg_returns, marker='o', linestyle='-', color='b')
+
+# Add some plot decorations
+plt.title('Average Return vs. Number of Iterations')
+plt.xlabel('Iterations')
+plt.ylabel('Average Return')
+plt.grid(True)
+
+# Show the plot
+plt.show()
