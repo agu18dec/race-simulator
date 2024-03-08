@@ -215,17 +215,17 @@ def main(sim_opts: dict, race_pars_file: str, mcs_pars_file: str) -> list:
             # race_results[0].print_details()
 
         if sim_opts["use_plot"]:
-            # race_results[0].plot_laptimes()
-            # race_results[0].plot_positions()
-            # race_results[0].plot_racetime_diffto_refdriver(1)
-            # race_results[0].plot_raceprogress_over_racetime()
+            race_results[0].plot_laptimes()
+            race_results[0].plot_positions()
+            race_results[0].plot_racetime_diffto_refdriver(1)
+            #race_results[0].plot_raceprogress_over_racetime()
 
             laps_simulated = race_results[0].cur_lap
             t_race_winner = np.sort(race_results[0].racetimes[laps_simulated, :])[0]
             race_results[0].plot_racetime_diffto_reflaptime(ref_laptime=t_race_winner / laps_simulated)
 
         # evaluation
-        # race_results[0].print_race_standings(racetime=2520.2)
+        race_results[0].print_race_standings(racetime=2520.2)
 
         # save lap times, race times and positions to csv files
         race_results[0].export_results_as_csv(results_path=results_path)
