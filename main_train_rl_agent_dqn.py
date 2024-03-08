@@ -45,7 +45,7 @@ vse_others = "realstrategy"
 mcs_pars_file = "pars_mcs.ini"  # parameter file for Monte Carlo parameters
 
 # hyperparameters
-num_iterations = 250_000#25_000#250_000
+num_iterations = 10_000#250_000#25_000#250_000
 replay_buffer_max_length = 200_000
 initial_collect_steps = 200
 collect_steps_per_iteration = 1
@@ -60,7 +60,7 @@ dueling_q_net = False
 
 # training options
 log_interval = 100_000
-eval_interval = 10_000
+eval_interval = 1_000#10_000
 num_eval_episodes = 100
 
 # postprocessing (currently not implemented for multi-agent environment)
