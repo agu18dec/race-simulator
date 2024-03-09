@@ -48,7 +48,7 @@ class RaceSimulation(tf_agents.environments.py_environment.PyEnvironment):
                                             2: VSC active and didn't start within this lap
                                             3: SC started within this lap (at least 5% before the end of the lap)
                                             4: SC active and didn't start within this lap
-        close_behind:               [-] interval is <= 1.5 s
+        close_behind:               [-] interval is <= 1.5 s This is DRS Region
         close_ahead:                [-] ahead is <= 1.5 s
         defendable_undercut:        [-] pit stop of pursuer in the previous lap, undercut possible and defendable
         driver_initials:            [-] driver initials
@@ -473,7 +473,7 @@ class RaceSimulation(tf_agents.environments.py_environment.PyEnvironment):
 
     def __calculate_reward_laptime(self, t_pitdrive_inlap: float) -> float:
         """
-        This method returns an reward defined as the difference between the driver's lap time and an average lap time
+        This method returns a reward defined as the difference between the driver's lap time and an average lap time
         (reward = average lap time - driver's lap time). The lap time for laps with SC/VSC phases is given for all
         drivers. The average lap time is calculated from the weighted sum of the lowest possible average lap time
         without SC/VSC from a pre-simulation and the lap time with SC/VSC. The weighting factor depends on the ratio of
@@ -533,6 +533,25 @@ class RaceSimulation(tf_agents.environments.py_environment.PyEnvironment):
                     reward = 0.0
 
         return reward
+    
+    def __get_position_points(self, position: int) -> int:
+        """
+        Returns the points associated with a given position.
+        """
+        position_points = {
+            1: 25,
+            2: 18,
+            3: 15,
+            4: 12,
+            5: 10,
+            6: 8,
+            7: 6,
+            8: 4,
+            9: 2,
+            10: 1
+        }
+        # Return the points for the position, or 0 if the position is not in the top 10
+        return position_points.get(position, 0)
 
     def __calculate_reward_position(self, delta_position: np.int32) -> float:
         """
@@ -540,12 +559,22 @@ class RaceSimulation(tf_agents.environments.py_environment.PyEnvironment):
         decision.
         delta_position: Positions lost or won between pit stop entrance and end of the previous lap.
         """
+        """
+        This method calculates and returns a weighted reward based on positions the driver won or lost
+        until the next pit stop decision, with specific rewards for each position gained.
+        """
+        # Calculate the old and new positions
+        old_position = self.race.positions[self.race.cur_lap - 1, self.idx_driver]
+        new_position = self.race.positions[self.race.cur_lap, self.idx_driver] + delta_position
+        old_points = self.__get_position_points(old_position)
+        new_points = self.__get_position_points(new_position)
+        reward = new_points - old_points
+        # reward = (self.race.positions[self.race.cur_lap - 1, self.idx_driver]
+        #           - self.race.positions[self.race.cur_lap, self.idx_driver]
+        #           + delta_position)
+        #return 5.0 * reward
 
-        reward = (self.race.positions[self.race.cur_lap - 1, self.idx_driver]
-                  - self.race.positions[self.race.cur_lap, self.idx_driver]
-                  + delta_position)
-
-        return 5.0 * reward
+        return reward
 
     def __calculate_reward_final_position(self) -> float:
         """
@@ -561,15 +590,25 @@ class RaceSimulation(tf_agents.environments.py_environment.PyEnvironment):
         # get driver initials in order of rising average lap times
         driver_initials_sorted = [k for k, v in sorted(average_laptimes.items(), key=lambda x: x[1])]
 
-        # get position of driver according to average lap times of the drivers finishing the race
+        # # get position of driver according to average lap times of the drivers finishing the race
+        # position_avg_laptime = driver_initials_sorted.index(self.driver_initials) + 1
+
+        # # final race position
+        # position_race = self.race.positions[self.race.get_last_compl_lap(idx=self.idx_driver), self.idx_driver]
+
+        # # calculate reward
+        # reward = position_avg_laptime - position_race
         position_avg_laptime = driver_initials_sorted.index(self.driver_initials) + 1
 
         # final race position
         position_race = self.race.positions[self.race.get_last_compl_lap(idx=self.idx_driver), self.idx_driver]
 
-        # calculate reward
-        reward = position_avg_laptime - position_race
+        # Get weighted points for the position based on average lap time and final race position
+        points_avg_laptime = self.__get_position_points(position_avg_laptime)
+        points_race = self.__get_position_points(position_race)
 
+        # calculate reward based on the difference in points
+        reward = points_avg_laptime - points_race
         return reward
 
     def _reset(self) -> tf_agents.trajectories.time_step.TimeStep:
