@@ -608,6 +608,7 @@ class RaceSimulation(tf_agents.environments.py_environment.PyEnvironment):
         points_race = self.__get_position_points(position_race)
 
         # calculate reward based on the difference in points
+        #positive reward if the driver's race finish position (position_race) is better (numerically lower) than their position based on average lap times (position_avg_laptime).
         reward = points_avg_laptime - points_race
         return reward
 
